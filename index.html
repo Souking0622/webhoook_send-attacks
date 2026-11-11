@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Webhook Sender</title>
+
+<style>
+
+:root {
+    --bg-color: #000000;
+    --panel-color: #000000;
+    --input-color: #000000;
+    --text-color: #1a1a1a;
+    --max-send-count: 100;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 40px 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--bg-color);
+    color: var(--text-color);
+
+    font-family:
+        Arial,
+        "Noto Sans JP",
+        sans-serif;
+}
+
+.container {
+    width: 100%;
+    max-width: 620px;
+    margin: auto;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #ffffff;
+}
+
+.header p {
+    margin: 9px 0 0;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: #e0e0e0;
+}
+
+.panel {
+    width: 100%;
+    padding: 36px;
+
+    background: var(--panel-color);
+    border-radius: 14px;
+
+    box-shadow:
+        0 8px 25px rgba(0,0,0,0.15);
+}
+
+.form-group {
+    width: 100%;
+    margin-bottom: 25px;
+}
+
+label {
+    display: block;
+    margin-bottom: 11px;
+
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+input,
+textarea {
+    display: block;
+    width: 100%;
+
+    border: 1px solid #999999;
+    border-radius: 7px;
+
+    background: var(--input-color);
+    color: #ffffff;
+
+    padding: 14px;
+
+    font-size: 14px;
+    outline: none;
+
+    transition: border-color 0.2s,
+                box-shadow 0.2s;
+}
+
+input:focus,
+textarea:focus {
+    border-color: #ffffff;
+
+    box-shadow:
+        0 0 0 2px rgba(255,255,255,0.12);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #bbbbbb;
+}
+
+#webhook {
+    height: 48px;
+}
+
+textarea {
+    min-height: 150px;
+    resize: vertical;
+
+    line-height: 1.7;
+    font-family: inherit;
+}
+
+.count-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-top: 5px;
+    margin-bottom: 30px;
+}
+
+.count-area label {
+    margin: 0;
+}
+
+.count-area input {
+    width: 105px;
+    height: 42px;
+
+    text-align: center;
+    font-weight: bold;
+}
+
+.button-area {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.send-button {
+    min-width: 120px;
+    min-height: 46px;
+
+    padding: 12px 30px;
+
+    border: none;
+    border-radius: 7px;
+
+    background: #ff0000;
+    color: #000000;
+
+    font-size: 14px;
+    font-weight: bold;
+
+    cursor: not-allowed;
+
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+
+.send-button.active {
+    background: #ffffff;
+    color: #333333;
+    cursor: pointer;
+}
+
+.send-button.active:hover {
+    background: #dddddd;
+    transform: translateY(-2px);
+}
+
+.send-button:disabled {
+    opacity: 0.65;
+}
+
+.footer {
+    margin-top: 20px;
+
+    text-align: center;
+    font-size: 11px;
+
+    color: #eeeeee;
+}
+
+.overlay {
+    display: none;
+
+    position: fixed;
+    inset: 0;
+
+    z-index: 1000;
+
+    background: rgba(0,0,0,0.55);
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.modal {
+    width: 100%;
+    max-width: 380px;
+
+    padding: 32px 25px;
+
+    background: #f5f5f5;
+    color: #333333;
+
+    border-radius: 12px;
+
+    text-align: center;
+
+    box-shadow:
+        0 10px 35px rgba(0,0,0,0.25);
+
+    animation: appear 0.2s ease;
+}
+
+.modal h2 {
+    margin: 0 0 13px;
+    font-size: 21px;
+}
+
+.modal p {
+    margin: 0;
+
+    font-size: 13px;
+    line-height: 1.8;
+
+    color: #666666;
+    white-space: pre-line;
+
+    overflow-wrap: anywhere;
+}
+
+.modal button {
+    margin-top: 20px;
+
+    padding: 11px 30px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: #444444;
+    color: #ffffff;
+
+    cursor: pointer;
+}
+
+.modal button:hover {
+    background: #222222;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media screen and (max-width: 768px) {
+
+    body {
+        padding: 30px 20px;
+    }
+
+    .container {
+        max-width: 560px;
+    }
+
+    .panel {
+        padding: 30px;
+    }
+
+}
+
+@media screen and (max-width: 600px) {
+
+    body {
+        padding: 24px 15px;
+        align-items: center;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .header {
+        margin-bottom: 22px;
+    }
+
+    .header h1 {
+        font-size: 25px;
+    }
+
+    .header p {
+        font-size: 11px;
+    }
+
+    .panel {
+        padding: 23px 18px;
+        border-radius: 11px;
+    }
+
+    .form-group {
+        margin-bottom: 21px;
+    }
+
+    label {
+        font-size: 13px;
+    }
+
+    input,
+    textarea {
+        font-size: 16px;
+        padding: 13px;
+    }
+
+    #webhook {
+        height: 47px;
+    }
+
+    textarea {
+        min-height: 135px;
+    }
+
+    .count-area input {
+        width: 95px;
+        height: 44px;
+    }
+
+    .send-button {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    .button-area {
+        margin-top: 5px;
+    }
+
+    .modal {
+        max-width: 100%;
+        padding: 27px 20px;
+    }
+
+}
+
+
+@media screen and (max-width: 360px) {
+
+    body {
+        padding: 18px 11px;
+    }
+
+    .panel {
+        padding: 19px 14px;
+    }
+
+    .header h1 {
+        font-size: 22px;
+    }
+
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+
+        <h1 id="appTitle">
+            Webhook Sender
+        </h1>
+
+        <p>
+            Discord Message Tool
+        </p>
+
+    </div>
+
+    <div class="panel">
+
+        <!-- Webhook URL -->
+
+        <div class="form-group">
+
+            <label for="webhook">
+                Webhook URL
+            </label>
+
+            <input
+                type="text"
+                id="webhook"
+                placeholder="Discord Webhook URL Paste..."
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+            >
+
+        </div>
+        <div class="form-group">
+            <label for="message">
+                Message
+            </label>
+            <textarea
+                id="message"
+                placeholder="Enter your message..."
+            ></textarea>
+        </div>
+
+        <div class="count-area">
+
+            <label for="count">
+                送信回数
+            </label>
+
+            <input
+                type="number"
+                id="count"
+                value="1"
+                min="1"
+                max="5"
+                step="1"
+            >
+        </div>
+        <div class="button-area">
+            <button
+                class="send-button"
+                id="sendButton"
+                disabled
+            >
+                Send attack
+            </button>
+        </div>
+    </div>
+    <div class="footer">
+        Discord Webhook Sender
+    </div>
+</div>
+<div class="overlay" id="overlay">
+    <div class="modal">
+        <h2 id="modalTitle">
+            送信完了！
+        </h2>
+        <p id="modalMessage">
+            メッセージを送信しました。
+        </p>
+        <button id="closeModal">
+            閉じる
+        </button>
+    </div>
+</div>
+
+<script>
+
+const APP_TITLE = "Webhook Sender";
+
+const MAX_SEND_COUNT = 100;
+
+const SEND_INTERVAL = 1000;
+
+document.getElementById("appTitle").textContent = APP_TITLE;
+
+const webhookInput =
+    document.getElementById("webhook");
+
+const messageInput =
+    document.getElementById("message");
+
+const countInput =
+    document.getElementById("count");
+
+const sendButton =
+    document.getElementById("sendButton");
+
+const overlay =
+    document.getElementById("overlay");
+
+const modalTitle =
+    document.getElementById("modalTitle");
+
+const modalMessage =
+    document.getElementById("modalMessage");
+
+const closeModal =
+    document.getElementById("closeModal");
+
+
+countInput.max = MAX_SEND_COUNT;
+
+function isValidWebhook(value) {
+
+    try {
+
+        const url = new URL(value);
+
+        return (
+            url.protocol === "https:" &&
+            url.hostname === "discord.com" &&
+            /^\/api\/webhooks\/\d+\/[^/]+\/?$/.test(url.pathname)
+        );
+
+    } catch {
+
+        return false;
+
+    }
+
+}
+
+function updateButton() {
+
+    const webhook =
+        webhookInput.value.trim();
+
+    const message =
+        messageInput.value.trim();
+
+    let count =
+        Number(countInput.value);
+
+    if (countInput.value === "") {
+        count = 0;
+    }
+
+    const validCount =
+        Number.isInteger(count) &&
+        count >= 1 &&
+        count <= MAX_SEND_COUNT;
+
+    const valid =
+        isValidWebhook(webhook) &&
+        message.length > 0 &&
+        message.length <= 2000 &&
+        validCount;
+
+    sendButton.disabled = !valid;
+
+    sendButton.classList.toggle(
+        "active",
+        valid
+    );
+
+}
+
+webhookInput.addEventListener(
+    "input",
+    updateButton
+);
+
+messageInput.addEventListener(
+    "input",
+    updateButton
+);
+
+countInput.addEventListener(
+    "input",
+    updateButton
+);
+
+countInput.addEventListener(
+    "change",
+    () => {
+
+        let value =
+            Number(countInput.value);
+
+        if (!Number.isInteger(value)) {
+            value = 1;
+        }
+
+        value = Math.max(
+            1,
+            Math.min(MAX_SEND_COUNT, value)
+        );
+
+        countInput.value = value;
+
+        updateButton();
+
+    }
+);
+
+function showModal(title, message) {
+
+    modalTitle.textContent = title;
+
+    modalMessage.textContent = message;
+
+    overlay.classList.add("show");
+
+}
+
+closeModal.addEventListener(
+    "click",
+    () => {
+
+        overlay.classList.remove("show");
+
+    }
+);
+
+sendButton.addEventListener(
+    "click",
+    async () => {
+
+        const webhook =
+            webhookInput.value.trim();
+
+        const message =
+            messageInput.value.trim();
+
+        const count =
+            Number(countInput.value);
+
+        if (
+            !isValidWebhook(webhook) ||
+            !message ||
+            message.length > 2000 ||
+            !Number.isInteger(count) ||
+            count < 1 ||
+            count > MAX_SEND_COUNT
+        ) {
+
+            updateButton();
+
+            return;
+
+        }
+
+        sendButton.disabled = true;
+
+        sendButton.textContent = "送信中...";
+
+        let successCount = 0;
+
+        try {
+
+            for (
+                let i = 0;
+                i < count;
+                i++
+            ) {
+
+                const response = await fetch(
+                    webhook,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            content: message,
+
+                            allowed_mentions: {
+                                parse: []
+                            }
+
+                        })
+
+                    }
+                );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        `HTTP ${response.status}`
+                    );
+
+                }
+
+
+                successCount++;
+
+                if (i < count - 1) {
+
+                    await new Promise(
+                        resolve =>
+                            setTimeout(
+                                resolve,
+                                SEND_INTERVAL
+                            )
+                    );
+
+                }
+
+            }
+
+
+            showModal(
+                "送信完了！",
+                `${successCount}回のメッセージ送信が完了しました。`
+            );
+
+
+        } catch (error) {
+
+            showModal(
+                "送信エラー",
+                `${successCount}回送信しました。\n残りの送信は停止しました。\n\n${error.message}`
+            );
+
+        } finally {
+
+            sendButton.textContent = "送信";
+
+            updateButton();
+
+        }
+
+    }
+);
+
+updateButton();
+
+</script>
+
+</body>
+</html>
